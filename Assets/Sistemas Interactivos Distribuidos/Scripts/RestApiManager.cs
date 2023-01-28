@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using static UnityEditor.Progress;
 
 public class RestApiManager : MonoBehaviour
 {
     [SerializeField] private List<RawImage> YourRawImage;
-    [SerializeField] private List<string> UserDeck = new List<string>();
     [SerializeField] private int UserId = 1;
     [SerializeField] private string ServerApiPath = "https://my-json-server.typicode.com/jaydeeay/JSONSV";
     [SerializeField] private string RickAndoMortyApi = "https://rickandmortyapi.com/api";
@@ -15,20 +15,17 @@ public class RestApiManager : MonoBehaviour
 
     public void GetCharacterClick() 
     {
-        StartCoroutine(GetCharacter(1));
-    }    
+        StartCoroutine(GetCharacter(1,1));
+    }
+    public void ChangeNumber(int number)
+    {
+        UserId = number;
+    }
     public void GetPlayerInfoClick() 
     {
         StartCoroutine(GetPlayerInfo());
-
-        int i =0;
-        foreach (string item in UserDeck)
-        {
-            StartCoroutine(DownloadImage(item, i));
-            Debug.Log(i);
-            i++;
-        }
     }   
+
 
     IEnumerator GetPlayerInfo()
     {
@@ -55,12 +52,11 @@ public class RestApiManager : MonoBehaviour
                 UserData user = JsonUtility.FromJson<UserData>(www.downloadHandler.text);
 
                 Debug.Log("Name:" + user.name);
-                
 
-                foreach (int item in user.deck)
+                for (int i = 0; i < user.deck.Length; i++)
                 {
-                    //Debug.Log(item);
-                    StartCoroutine(GetCharacter(item));
+                    StartCoroutine(GetCharacter(user.deck[i],i));
+                    yield return new WaitForSeconds(0.1f);
                 }
             }
             else
@@ -75,7 +71,7 @@ public class RestApiManager : MonoBehaviour
             byte[] results = www.downloadHandler.data;
         }
     }
-    IEnumerator GetCharacter(int Id)
+    IEnumerator GetCharacter(int Id, int Place)
     {
         UnityWebRequest www = UnityWebRequest.Get(RickAndoMortyApi + "/character/" + Id);
         yield return www.Send();
@@ -96,7 +92,8 @@ public class RestApiManager : MonoBehaviour
             if (www.responseCode == 200)
             {
                 Character character = JsonUtility.FromJson<Character>(www.downloadHandler.text);
-                UserDeck.Add(character.image);
+                Debug.Log(character.id);
+                StartCoroutine(DownloadImage(character.image,Place));
             }
             else
             {
@@ -111,15 +108,14 @@ public class RestApiManager : MonoBehaviour
         }
     }
 
-    IEnumerator DownloadImage(string url, int place)
+    IEnumerator DownloadImage(string url, int Place)
     {
-        yield return new WaitForSeconds(0.5f);
         UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
         yield return request.SendWebRequest();
         
         if (request.isNetworkError || request.isHttpError)
             Debug.Log(request.error);
-        else YourRawImage[place].texture = ((DownloadHandlerTexture)request.downloadHandler).texture;                
+        else YourRawImage[Place].texture = ((DownloadHandlerTexture)request.downloadHandler).texture;                
     }
 }
 
@@ -145,6 +141,10 @@ public class Character
     public int id;
     public string name;
     public string specie;
+    public string image;
+}
+public class CharacterImage
+{
     public string image;
 }
 
